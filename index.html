@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>LearningWithUnc · 3D Chess Studio</title>
+<style>*{box-sizing:border-box}html,body{margin:0;height:100%;background:#111b2a;color:#f4f2e9;font-family:system-ui,Arial}body{display:flex;flex-direction:column}header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;background:#182439}header strong{font-size:15px}small{display:block;color:#afbdd0;font-size:11px}button{background:#304864;color:#fff;border:1px solid #5a708c;padding:9px 11px;border-radius:7px;cursor:pointer}button:focus-visible{outline:2px solid #fff}#view{flex:1;min-height:220px;position:relative}#status{position:absolute;bottom:12px;left:12px;font-size:12px;padding:7px 10px;background:#142035d9;border-radius:7px;pointer-events:none}canvas{display:block;touch-action:none}</style></head><body>
+<header><div><strong>LearningWithUnc · 3D Chess Studio</strong><small>Mobile preview · Procedural models · Soft studio lighting</small></div><div><button id="top">Top down</button> <button id="angle">Reference angle</button> <button id="reset">Reset view</button></div></header><main id="view"><div id="status">Starting renderer…</div></main>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
+const host=document.getElementById('view'),status=document.getElementById('status');
+const scene=new THREE.Scene();scene.background=new THREE.Color('#29364b');
+const camera=new THREE.OrthographicCamera(-6.8,6.8,6.8,-6.8,.1,100);camera.up.set(0,0,1);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.35;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,0,.25);controls.minZoom=.55;controls.maxZoom=2.6;
+function pose(top){camera.position.set(0,top?0:-7,top?17:14);camera.lookAt(0,0,.25);controls.target.set(0,0,.25);controls.update()}
+document.getElementById('top').onclick=()=>pose(true);document.getElementById('angle').onclick=()=>pose(false);document.getElementById('reset').onclick=()=>{camera.zoom=1;camera.updateProjectionMatrix();pose(false)};pose(false);
+scene.add(new THREE.HemisphereLight(0xf5f7ff,0x667083,2.4));scene.add(new THREE.AmbientLight(0xffffff,.5));
+RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xfff2de,9,11,9);area.position.set(-3,-3,10);area.lookAt(0,0,0);scene.add(area);
+const fill=new THREE.RectAreaLight(0xc7ddff,5,8,8);fill.position.set(4,3,8);fill.lookAt(0,0,0);scene.add(fill);
+const sun=new THREE.DirectionalLight(0xffffff,2);sun.position.set(-3,-4,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.bias=-.0003;sun.shadow.radius=4;scene.add(sun);
+const mat=(color,roughness=.55)=>new THREE.MeshStandardMaterial({color,roughness,metalness:.08});
+const ivory=mat('#eee4cf',.36),ebony=mat('#202631',.29),blue=mat('#487fa5',.75),cream=mat('#eadfc9',.8),trim=mat('#242c37',.45),gold=mat('#c3a36d',.4);
+function mesh(g,m,parent,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+mesh(new THREE.BoxGeometry(8.45,8.45,.32),trim,scene,0,0,-.2);
+for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++)mesh(new THREE.BoxGeometry(1,1,.055),(rank+file)%2?blue:cream,scene,file-3.5,rank-3.5,.005);
+const cyl=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,32),sphere=r=>new THREE.SphereGeometry(r,20,14);
+function piece(type,side,x,y){
+const group=new THREE.Group();group.position.set(x,y,.04);scene.add(group);const m=side==='w'?ivory:ebony;
+const part=(g,z)=>mesh(g,m,group,0,0,z);
+part(cyl(.36,.4,.12),.08);part(cyl(.28,.34,.12),.19);part(cyl(.18,.25,.42),.46);
+if(type==='p'){part(sphere(.205),.77)}
+if(type==='r'){part(cyl(.3,.2,.12),.72);part(cyl(.32,.32,.11),.84);for(let a=0;a<6;a++){const t=a*Math.PI/3;mesh(new THREE.BoxGeometry(.16,.14,.18),m,group,.24*Math.cos(t),.24*Math.sin(t),.99)}}
+if(type==='n'){part(cyl(.27,.19,.13),.73);const neck=mesh(new THREE.BoxGeometry(.24,.33,.49),m,group,0,-.045,.95);neck.rotation.x=-.24;const head=mesh(new THREE.BoxGeometry(.26,.45,.22),m,group,0,-.13,1.19);head.rotation.x=-.35;mesh(sphere(.045),gold,group,-.13,-.31,1.22)}
+if(type==='b'){part(cyl(.24,.16,.16),.76);const bulb=part(sphere(.22),.98);bulb.scale.z=1.5;part(sphere(.09),1.31)}
+if(type==='q'){part(cyl(.29,.19,.13),.77);part(cyl(.27,.25,.1),.91);for(let a=0;a<7;a++){const t=a*Math.PI*2/7;mesh(sphere(.07),m,group,.24*Math.cos(t),.24*Math.sin(t),1.13)}part(sphere(.11),1.1)}
+if(type==='k'){part(cyl(.27,.2,.19),.79);part(cyl(.22,.26,.12),.98);mesh(new THREE.BoxGeometry(.12,.13,.39),m,group,0,0,1.24);mesh(new THREE.BoxGeometry(.31,.13,.11),m,group,0,0,1.29)}
+}
+const back='rnbqkbnr';for(let f=0;f<8;f++){piece(back[f],'w',f-3.5,-3.5);piece('p','w',f-3.5,-2.5);piece('p','b',f-3.5,2.5);piece(back[f],'b',f-3.5,3.5)}
+function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;const aspect=w/h;const span=5.6;camera.left=-span*aspect;camera.right=span*aspect;camera.top=span;camera.bottom=-span;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}new ResizeObserver(resize).observe(host);resize();
+function render(){requestAnimationFrame(render);controls.update();renderer.render(scene,camera)}render();
+status.textContent='32 3D pieces · 64 colored squares · Soft studio lighting';
+</script></body></html>
