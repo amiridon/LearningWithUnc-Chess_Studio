@@ -65,47 +65,56 @@ mesh(sphere(.038),gold,group,-.19,-.17,1.13);
 }
 const back='rnbqkbnr';
 for(let f=0;f<8;f++){piece(back[f],'w',f-3.5,-3.5);piece('p','w',f-3.5,-2.5);piece('p','b',f-3.5,2.5);piece(back[f],'b',f-3.5,3.5)}
-// Six genuine, independently sculpted GLB meshes, loaded as a coherent CC0 set.
-// Source: https://3dassets.dev/packs/classic-chess-essentials
-// If any asset fails, the previous procedural set stays visible rather than leaving an empty board.
-const glbIds={p:19472,r:19474,n:19471,b:19466,q:19470,k:19469};
+// Real sculpted meshes from Poly Haven's CC0 Chess Set, via a public GitHub mirror.
+// The previous 3dassets.dev pack had obviously angular silhouettes in user screenshots.
+// GLTFLoader resolves the adjacent chess_set.bin automatically.
+const MODEL_URL='https://raw.githubusercontent.com/Mike1934F/3d-chess/main/assets/chess_set.gltf';
 const loader=new GLTFLoader();
-const assetEntries=Object.entries(glbIds);
-status.textContent='Loading sculpted Staunton GLB pieces…';
-Promise.all(assetEntries.map(async ([kind,id])=>{
- const gltf=await loader.loadAsync('https://cdn.3dassets.dev/assets/'+id+'/v1/model.glb');
- return [kind,gltf.scene];
-})).then(entries=>{
- const assets=Object.fromEntries(entries);
- const newPieces=[];
- try{
-   for(let file=0;file<8;file++){
-     for(const [kind,side,y] of [[back[file],'w',-3.5],['p','w',-2.5],['p','b',2.5],[back[file],'b',3.5]]){
-       const group=new THREE.Group();
-       group.position.set(file-3.5,y,.047);
-       const model=assets[kind].clone(true);
-       // GLB is Y-up; viewer uses Z-up. The chess pack is authored in metres.
-       model.rotation.x=Math.PI/2;
-       model.scale.setScalar(15.3);
-       model.traverse(o=>{
-         if(!o.isMesh)return;
-         o.material=side==='w'?ivory:ebony;
-         o.castShadow=true;
-         o.receiveShadow=true;
-       });
-       group.add(model);newPieces.push(group);
-     }
-   }
-   for(const group of newPieces)scene.add(group);
-   for(const group of fallbackPieces)scene.remove(group);
-   status.textContent='v0.9 · Sculpted GLB Staunton set · 32 pieces · CC0';
- }catch(error){
-   for(const group of newPieces)scene.remove(group);
-   throw error;
- }
-}).catch(error=>{
- console.error('GLB chess model loading failed; retaining fallback pieces.',error);
- status.textContent='3D model loading unavailable — procedural fallback displayed';
+status.textContent='Loading Poly Haven sculpted chess meshes…';
+loader.load(MODEL_URL, gltf=>{
+  const newPieces=[];
+  const names={p:'pawn',r:'rook',n:'knight',b:'bishop',q:'queen',k:'king'};
+  const heights={p:.56,r:.72,n:.76,b:.88,q:1.02,k:1.12};
+  const make=(type,side,x,y)=>{
+    const prefix='piece_'+names[type]+'_'+(side==='w'?'white':'black');
+    const original=gltf.scene.children.find(obj=>obj.name===prefix || obj.name.startsWith(prefix+'_'));
+    if(!original)throw Error('Missing model: '+prefix);
+    const wrapper=new THREE.Group();
+    wrapper.position.set(x,y,.04);
+    const orientation=new THREE.Group();orientation.rotation.x=Math.PI/2;
+    const model=original.clone(true);
+    model.position.set(0,0,0);
+    model.rotation.set(0,0,0);
+    model.scale.set(1,1,1);
+    // Source is Y-up. Recenter the native mesh on the base before rotating to Z-up.
+    const bbox=new THREE.Box3().setFromObject(model);
+    const center=bbox.getCenter(new THREE.Vector3());
+    const size=bbox.getSize(new THREE.Vector3());
+    if(size.y<=.00001)throw Error('Invalid mesh height: '+prefix);
+    model.position.set(-center.x,-bbox.min.y,-center.z);
+    orientation.scale.setScalar(heights[type]/size.y);
+    model.traverse(o=>{if(!o.isMesh)return;
+      o.material=side==='w'?ivory:ebony;
+      o.castShadow=true;o.receiveShadow=true;
+      if(o.geometry && !o.geometry.attributes.normal)o.geometry.computeVertexNormals();
+    });
+    orientation.add(model);wrapper.add(orientation);
+    newPieces.push(wrapper);
+  };
+  try{
+    for(let file=0;file<8;file++){
+      make(back[file],'w',file-3.5,-3.5);
+      make('p','w',file-3.5,-2.5);
+      make('p','b',file-3.5,2.5);
+      make(back[file],'b',file-3.5,3.5);
+    }
+    newPieces.forEach(obj=>scene.add(obj));
+    fallbackPieces.forEach(obj=>scene.remove(obj));
+    status.textContent='v1.0 · Poly Haven sculpted chess set · 32 pieces';
+  }catch(err){newPieces.forEach(obj=>scene.remove(obj));status.textContent='Model issue: procedural fallback displayed';console.error(err)}
+},undefined,err=>{
+  status.textContent='Model download unavailable: fallback pieces displayed';
+  console.error('Poly Haven model failed to load',err);
 });
 function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}new ResizeObserver(resize).observe(host);resize();
 function render(){requestAnimationFrame(render);controls.update();renderer.render(scene,camera)}render();
