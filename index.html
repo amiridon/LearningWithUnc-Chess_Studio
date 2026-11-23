@@ -11,8 +11,8 @@ const host=document.getElementById('view'),status=document.getElementById('statu
 const scene=new THREE.Scene();scene.background=new THREE.Color('#252b32');
 const camera=new THREE.PerspectiveCamera(29,1,.1,150);camera.up.set(0,0,1);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.88;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,0,.25);controls.enablePan=true;controls.minDistance=9;controls.maxDistance=55;
-function pose(top){camera.position.set(0,top?0:-9.5,top?34:31);camera.lookAt(0,0,.25);controls.target.set(0,0,.25);controls.update()}
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,0,.25);controls.enablePan=false;controls.minDistance=9;controls.maxDistance=55;
+function pose(top){controls.reset();camera.position.set(0,top?0:-9.5,top?34:31);controls.target.set(0,0,.25);camera.lookAt(controls.target);controls.update()}
 document.getElementById('top').onclick=()=>pose(true);document.getElementById('angle').onclick=()=>pose(false);document.getElementById('reset').onclick=()=>{camera.zoom=1;camera.updateProjectionMatrix();pose(false)};pose(false);
 scene.add(new THREE.HemisphereLight(0xe4e9f0,0x29313b,.65));scene.add(new THREE.AmbientLight(0xffffff,.12));
 RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xffe8c9,4.2,10,8);area.position.set(-3,-3,10);area.lookAt(0,0,0);scene.add(area);
@@ -22,20 +22,25 @@ const rearRim=new THREE.DirectionalLight(0xc5d8ff,1.05);rearRim.position.set(1,7
 const sun=new THREE.DirectionalLight(0xfff3e5,1.6);sun.position.set(-3,-4,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.bias=-.0003;sun.shadow.radius=4;scene.add(sun);
 
 const mat=(color,roughness=.3,metalness=.12)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
-const ivory=mat('#d8cbb2',.27,.08),ebony=mat('#101319',.19,.22),blue=mat('#385778',.84,0),cream=mat('#d8d0b9',.85,0),trim=mat('#1b1e22',.45,.12),gold=mat('#9e8159',.33,.3);
+const ivory=mat('#d8cbb2',.27,.08),ebony=mat('#171c24',.24,.18),blue=mat('#385778',.84,0),cream=mat('#d8d0b9',.85,0),trim=mat('#22262b',.5,.1),gold=mat('#9e8159',.33,.3);
 function mesh(g,m,parent,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
-mesh(new THREE.BoxGeometry(9.05,9.05,.34),trim,scene,-.12,-.12,-.23);
+const BORDER=.36;
+// Board and playing surface share the same center. All four physical rails have equal width.
+mesh(new THREE.BoxGeometry(8+2*BORDER,8+2*BORDER,.34),trim,scene,0,0,-.23);
+// Thin inset outline, avoiding the visually heavy slab edge.
+const inset=mat('#777b7e',.42,.25);
+mesh(new THREE.BoxGeometry(8.035,8.035,.012),inset,scene,0,0,-.019);
 for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++)mesh(new THREE.BoxGeometry(1,1,.032),(rank+file)%2?blue:cream,scene,file-3.5,rank-3.5,.007);
 const labelCanvas=document.createElement('canvas');labelCanvas.width=128;labelCanvas.height=128;
-const ctx=labelCanvas.getContext('2d');ctx.fillStyle='#ded8c8';ctx.font='bold 78px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';
+const ctx=labelCanvas.getContext('2d');ctx.fillStyle='#ded8c8';ctx.font='bold 82px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
 function addBoardLabel(value,x,y){
 ctx.clearRect(0,0,128,128);ctx.fillText(value,64,66);
 const snapshot=document.createElement('canvas');snapshot.width=128;snapshot.height=128;snapshot.getContext('2d').drawImage(labelCanvas,0,0);const texture=new THREE.CanvasTexture(snapshot);texture.needsUpdate=true;
-const label=new THREE.Mesh(new THREE.PlaneGeometry(.27,.27),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+const label=new THREE.Mesh(new THREE.PlaneGeometry(.20,.20),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
 label.position.set(x,y,-.045);scene.add(label);
 }
-for(let file=0;file<8;file++)addBoardLabel('ABCDEFGH'[file],file-3.5,-4.37);
-for(let rank=0;rank<8;rank++)addBoardLabel(String(rank+1),-4.38,rank-3.5);
+for(let file=0;file<8;file++)addBoardLabel('ABCDEFGH'[file],file-3.5,-4.18);
+for(let rank=0;rank<8;rank++)addBoardLabel(String(rank+1),-4.18,rank-3.5);
 const sphere=r=>new THREE.SphereGeometry(r,32,20);
 const cyl=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,40);
 function lathe(profile,m,parent){const g=new THREE.LatheGeometry(profile.map(([r,z])=>new THREE.Vector2(r,z)),48);g.rotateX(Math.PI/2);return mesh(g,m,parent)}
@@ -60,5 +65,5 @@ const back='rnbqkbnr';
 for(let f=0;f<8;f++){piece(back[f],'w',f-3.5,-3.5);piece('p','w',f-3.5,-2.5);piece('p','b',f-3.5,2.5);piece(back[f],'b',f-3.5,3.5)}
 function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}new ResizeObserver(resize).observe(host);resize();
 function render(){requestAnimationFrame(render);controls.update();renderer.render(scene,camera)}render();
-status.textContent='Studio lighting v0.7 · Smaller pieces · Rear fill · A–H / 1–8';
+status.textContent='v0.8 · Equal-width borders · Centered board · Rear fill';
 </script></body></html>
