@@ -74,7 +74,8 @@ status.textContent='Loading Poly Haven sculpted chess meshes…';
 loader.load(MODEL_URL, gltf=>{
   const newPieces=[];
   const names={p:'pawn',r:'rook',n:'knight',b:'bishop',q:'queen',k:'king'};
-  const heights={p:.56,r:.72,n:.76,b:.88,q:1.02,k:1.12};
+  // Target visible heights in board-square units. The previous model was undersized.
+  const heights={p:.85,r:1.03,n:1.14,b:1.17,q:1.33,k:1.43};
   const make=(type,side,x,y)=>{
     const prefix='piece_'+names[type]+'_'+(side==='w'?'white':'black');
     const original=gltf.scene.children.find(obj=>obj.name===prefix || obj.name.startsWith(prefix+'_'));
@@ -92,7 +93,11 @@ loader.load(MODEL_URL, gltf=>{
     const size=bbox.getSize(new THREE.Vector3());
     if(size.y<=.00001)throw Error('Invalid mesh height: '+prefix);
     model.position.set(-center.x,-bbox.min.y,-center.z);
-    orientation.scale.setScalar(heights[type]/size.y);
+    // Preserve each mesh's proportions, but keep its footprint clear of neighboring squares.
+    const heightScale=heights[type]/size.y;
+    const footprint=Math.max(size.x,size.z);
+    const scale=Math.min(heightScale,.82/Math.max(footprint,.00001));
+    orientation.scale.setScalar(scale);
     model.traverse(o=>{if(!o.isMesh)return;
       o.material=side==='w'?ivory:ebony;
       o.castShadow=true;o.receiveShadow=true;
@@ -110,7 +115,7 @@ loader.load(MODEL_URL, gltf=>{
     }
     newPieces.forEach(obj=>scene.add(obj));
     fallbackPieces.forEach(obj=>scene.remove(obj));
-    status.textContent='v1.0 · Poly Haven sculpted chess set · 32 pieces';
+    status.textContent='v1.1 · Larger Staunton pieces · 32 sculpted meshes';
   }catch(err){newPieces.forEach(obj=>scene.remove(obj));status.textContent='Model issue: procedural fallback displayed';console.error(err)}
 },undefined,err=>{
   status.textContent='Model download unavailable: fallback pieces displayed';
