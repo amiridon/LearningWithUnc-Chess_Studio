@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const host=document.getElementById('view'),status=document.getElementById('status');
 const scene=new THREE.Scene();scene.background=new THREE.Color('#252b32');
 const camera=new THREE.PerspectiveCamera(29,1,.1,150);camera.up.set(0,0,1);
@@ -41,11 +42,12 @@ label.position.set(x,y,-.045);scene.add(label);
 }
 for(let file=0;file<8;file++)addBoardLabel('ABCDEFGH'[file],file-3.5,-4.18);
 for(let rank=0;rank<8;rank++)addBoardLabel(String(rank+1),-4.18,rank-3.5);
+const fallbackPieces=[];
 const sphere=r=>new THREE.SphereGeometry(r,32,20);
 const cyl=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,40);
 function lathe(profile,m,parent){const g=new THREE.LatheGeometry(profile.map(([r,z])=>new THREE.Vector2(r,z)),48);g.rotateX(Math.PI/2);return mesh(g,m,parent)}
 function piece(type,side,x,y){
-const group=new THREE.Group();group.position.set(x,y,.04);group.scale.setScalar(.79);scene.add(group);
+const group=new THREE.Group();group.position.set(x,y,.04);group.scale.setScalar(.79);scene.add(group);fallbackPieces.push(group);
 const m=side==='w'?ivory:ebony;
 const profile=[[0,0],[.31,0],[.36,.035],[.37,.09],[.35,.135],[.3,.17],[.32,.205],[.3,.235],[.22,.265],[.19,.32],[.17,.43],[.19,.53],[.22,.59],[.23,.63],[.19,.665],[0,.665]];
 lathe(profile,m,group);
@@ -63,7 +65,49 @@ mesh(sphere(.038),gold,group,-.19,-.17,1.13);
 }
 const back='rnbqkbnr';
 for(let f=0;f<8;f++){piece(back[f],'w',f-3.5,-3.5);piece('p','w',f-3.5,-2.5);piece('p','b',f-3.5,2.5);piece(back[f],'b',f-3.5,3.5)}
+// Six genuine, independently sculpted GLB meshes, loaded as a coherent CC0 set.
+// Source: https://3dassets.dev/packs/classic-chess-essentials
+// If any asset fails, the previous procedural set stays visible rather than leaving an empty board.
+const glbIds={p:19472,r:19474,n:19471,b:19466,q:19470,k:19469};
+const loader=new GLTFLoader();
+const assetEntries=Object.entries(glbIds);
+status.textContent='Loading sculpted Staunton GLB pieces…';
+Promise.all(assetEntries.map(async ([kind,id])=>{
+ const gltf=await loader.loadAsync('https://cdn.3dassets.dev/assets/'+id+'/v1/model.glb');
+ return [kind,gltf.scene];
+})).then(entries=>{
+ const assets=Object.fromEntries(entries);
+ const newPieces=[];
+ try{
+   for(let file=0;file<8;file++){
+     for(const [kind,side,y] of [[back[file],'w',-3.5],['p','w',-2.5],['p','b',2.5],[back[file],'b',3.5]]){
+       const group=new THREE.Group();
+       group.position.set(file-3.5,y,.047);
+       const model=assets[kind].clone(true);
+       // GLB is Y-up; viewer uses Z-up. The chess pack is authored in metres.
+       model.rotation.x=Math.PI/2;
+       model.scale.setScalar(15.3);
+       model.traverse(o=>{
+         if(!o.isMesh)return;
+         o.material=side==='w'?ivory:ebony;
+         o.castShadow=true;
+         o.receiveShadow=true;
+       });
+       group.add(model);newPieces.push(group);
+     }
+   }
+   for(const group of newPieces)scene.add(group);
+   for(const group of fallbackPieces)scene.remove(group);
+   status.textContent='v0.9 · Sculpted GLB Staunton set · 32 pieces · CC0';
+ }catch(error){
+   for(const group of newPieces)scene.remove(group);
+   throw error;
+ }
+}).catch(error=>{
+ console.error('GLB chess model loading failed; retaining fallback pieces.',error);
+ status.textContent='3D model loading unavailable — procedural fallback displayed';
+});
 function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}new ResizeObserver(resize).observe(host);resize();
 function render(){requestAnimationFrame(render);controls.update();renderer.render(scene,camera)}render();
-status.textContent='v0.8 · Equal-width borders · Centered board · Rear fill';
+// Loading status is managed by the GLB loader above.
 </script></body></html>
