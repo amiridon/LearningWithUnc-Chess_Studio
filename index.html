@@ -10,9 +10,9 @@ import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniform
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 const host=document.getElementById('view'),status=document.getElementById('status'),appHeader=document.getElementById('appHeader');
 const params=new URLSearchParams(window.location.search);
-const scene=new THREE.Scene();scene.background=new THREE.Color('#58647a');
+const scene=new THREE.Scene();scene.background=new THREE.Color('#505a6b');
 const camera=new THREE.PerspectiveCamera(33,1,.1,150);camera.up.set(0,0,1);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.84;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.72;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,0,.3);controls.enablePan=false;controls.minDistance=7;controls.maxDistance=38;controls.maxPolarAngle=Math.PI*.48;controls.minPolarAngle=Math.PI*.18;
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 let livePieces=[];
@@ -25,27 +25,27 @@ window.addEventListener('keydown',event=>{if(event.key==='r'||event.key==='R'){p
 renderer.domElement.addEventListener('dblclick',event=>{if(!livePieces.length)return;const rect=renderer.domElement.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(livePieces,true)[0];if(!hit)return;const offset=camera.position.clone().sub(controls.target);controls.target.lerp(hit.point,.85);camera.position.copy(controls.target).add(offset);controls.update()});
 pose(params.get('pose')||'reference');
 if(params.get('presentation')==='1')setPresentationMode(true);
-scene.add(new THREE.HemisphereLight(0xe7f0ff,0x202733,.95));scene.add(new THREE.AmbientLight(0xffffff,.12));
-RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xffedd8,5.9,10.8,8.6);area.position.set(-3,-2.9,10.2);area.lookAt(0,0,.4);scene.add(area);
-const fill=new THREE.RectAreaLight(0xccddf6,2.65,8.6,7.6);fill.position.set(3.9,5.2,7.7);fill.lookAt(0,1.2,.58);scene.add(fill);
+scene.add(new THREE.HemisphereLight(0xe4eeff,0x1c222d,.72));scene.add(new THREE.AmbientLight(0xffffff,.08));
+RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xffedd8,6.4,10.6,8.4);area.position.set(-2.9,-2.8,10.1);area.lookAt(0,0,.4);scene.add(area);
+const fill=new THREE.RectAreaLight(0xbfd3f1,2.15,8.4,7.4);fill.position.set(4.1,5.4,7.5);fill.lookAt(0,1.3,.56);scene.add(fill);
 // A broad, shadow-free rear kicker lifts the dark pieces off the dark backdrop.
-const rearRim=new THREE.DirectionalLight(0xc4d4ee,1.12);rearRim.position.set(2.5,7.8,6.9);rearRim.target.position.set(0,2,0);scene.add(rearRim.target);scene.add(rearRim);
-const sun=new THREE.DirectionalLight(0xffe9cd,1.58);sun.position.set(-3.1,-3.9,10.7);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.bias=-.00024;sun.shadow.radius=4;scene.add(sun);
+const rearRim=new THREE.DirectionalLight(0xc1d3ee,1.2);rearRim.position.set(2.5,7.6,6.8);rearRim.target.position.set(0,2,0);scene.add(rearRim.target);scene.add(rearRim);
+const sun=new THREE.DirectionalLight(0xffe7c7,1.7);sun.position.set(-3.1,-3.85,10.5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.bias=-.00024;sun.shadow.radius=4;scene.add(sun);
 
 const mat=(color,roughness=.3,metalness=.12)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
-const ivory=mat('#ded6c3',.42,.03),ebony=mat('#171d26',.24,.27),blue=mat('#607ba4',.66,.025),cream=mat('#ded6c3',.7,.01),trim=mat('#181d25',.52,.06),gold=mat('#9e8159',.33,.3);
+const ivory=mat('#d8ceb6',.42,.035),ebony=mat('#171f2a',.17,.38),blue=mat('#58739e',.6,.03),cream=mat('#dbcfb7',.66,.01),trim=mat('#181d25',.52,.06),gold=mat('#9e8159',.33,.3);
 function mesh(g,m,parent,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
 const BORDER=.36;
 mesh(new THREE.BoxGeometry(26,26,.7),mat('#1f232a',.92,.02),scene,0,0,-.64);
-mesh(new THREE.BoxGeometry(18,4.2,1.4),mat('#2f3540',.86,.03),scene,0,8.5,.05);
+mesh(new THREE.BoxGeometry(18,4.2,1.4),mat('#323a45',.85,.03),scene,0,8.5,.05);
 // Board and playing surface share the same center. All four physical rails have equal width.
 mesh(new THREE.BoxGeometry(8+2*BORDER,8+2*BORDER,.34),trim,scene,0,0,-.23);
 // Thin inset outline, avoiding the visually heavy slab edge.
-const inset=mat('#8a8e95',.4,.2);
+const inset=mat('#98a0aa',.38,.18);
 mesh(new THREE.BoxGeometry(8.035,8.035,.012),inset,scene,0,0,-.019);
 function makeSquareMaterial(base,stripe){const c=document.createElement('canvas');c.width=256;c.height=256;const x=c.getContext('2d');x.fillStyle=base;x.fillRect(0,0,256,256);x.strokeStyle=stripe;x.lineWidth=3;for(let i=-256;i<512;i+=16){x.beginPath();x.moveTo(i,0);x.lineTo(i+256,256);x.stroke()}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1,1);t.anisotropy=renderer.capabilities.getMaxAnisotropy();return new THREE.MeshStandardMaterial({map:t,roughness:.62,metalness:.02})}
-const blueSquare=makeSquareMaterial('#6a82ab','rgba(255,255,255,.075)');
-const creamSquare=makeSquareMaterial('#e9e1ce','rgba(80,86,98,.05)');
+const blueSquare=makeSquareMaterial('#5e78a4','rgba(255,255,255,.105)');
+const creamSquare=makeSquareMaterial('#dfd3bb','rgba(94,96,102,.072)');
 for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++)mesh(new THREE.BoxGeometry(1,1,.032),(rank+file)%2?blueSquare:creamSquare,scene,file-3.5,rank-3.5,.007);
 const labelCanvas=document.createElement('canvas');labelCanvas.width=128;labelCanvas.height=128;
 const ctx=labelCanvas.getContext('2d');ctx.fillStyle='#ecebe7';ctx.font='bold 78px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -144,4 +144,6 @@ function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;
 function render(){requestAnimationFrame(render);controls.update();renderer.render(scene,camera)}render();
 // Loading status is managed by the GLB loader above.
 </script></body></html>
+
+
 
