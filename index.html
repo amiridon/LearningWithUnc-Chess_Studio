@@ -28,7 +28,7 @@ const labelCanvas=document.createElement('canvas');labelCanvas.width=128;labelCa
 const ctx=labelCanvas.getContext('2d');ctx.fillStyle='#ded8c8';ctx.font='bold 78px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';
 for(let file=0;file<8;file++){
 ctx.clearRect(0,0,128,128);ctx.fillText('ABCDEFGH'[file],64,66);
-const texture=new THREE.CanvasTexture(labelCanvas);texture.needsUpdate=true;
+const snapshot=document.createElement('canvas');snapshot.width=128;snapshot.height=128;snapshot.getContext('2d').drawImage(labelCanvas,0,0);const texture=new THREE.CanvasTexture(snapshot);texture.needsUpdate=true;
 const label=new THREE.Mesh(new THREE.PlaneGeometry(.27,.27),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
 label.position.set(file-3.5,-4.37,-.045);scene.add(label);
 }
