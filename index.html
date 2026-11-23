@@ -16,7 +16,9 @@ function pose(top){camera.position.set(0,top?0:-9.5,top?34:31);camera.lookAt(0,0
 document.getElementById('top').onclick=()=>pose(true);document.getElementById('angle').onclick=()=>pose(false);document.getElementById('reset').onclick=()=>{camera.zoom=1;camera.updateProjectionMatrix();pose(false)};pose(false);
 scene.add(new THREE.HemisphereLight(0xe4e9f0,0x29313b,.65));scene.add(new THREE.AmbientLight(0xffffff,.12));
 RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xffe8c9,4.2,10,8);area.position.set(-3,-3,10);area.lookAt(0,0,0);scene.add(area);
-const fill=new THREE.RectAreaLight(0xc8d7e8,.65,8,8);fill.position.set(4,3,8);fill.lookAt(0,0,0);scene.add(fill);
+const fill=new THREE.RectAreaLight(0xdde8ff,2.8,10,7);fill.position.set(1.5,6,9);fill.lookAt(0,1.8,.65);scene.add(fill);
+// A broad, shadow-free rear kicker lifts the dark pieces off the dark backdrop.
+const rearRim=new THREE.DirectionalLight(0xc5d8ff,1.05);rearRim.position.set(1,7,8);rearRim.target.position.set(0,2,0);scene.add(rearRim.target);scene.add(rearRim);
 const sun=new THREE.DirectionalLight(0xfff3e5,1.6);sun.position.set(-3,-4,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.bias=-.0003;sun.shadow.radius=4;scene.add(sun);
 
 const mat=(color,roughness=.3,metalness=.12)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
@@ -38,7 +40,7 @@ const sphere=r=>new THREE.SphereGeometry(r,32,20);
 const cyl=(a,b,h)=>new THREE.CylinderGeometry(a,b,h,40);
 function lathe(profile,m,parent){const g=new THREE.LatheGeometry(profile.map(([r,z])=>new THREE.Vector2(r,z)),48);g.rotateX(Math.PI/2);return mesh(g,m,parent)}
 function piece(type,side,x,y){
-const group=new THREE.Group();group.position.set(x,y,.04);scene.add(group);
+const group=new THREE.Group();group.position.set(x,y,.04);group.scale.setScalar(.79);scene.add(group);
 const m=side==='w'?ivory:ebony;
 const profile=[[0,0],[.31,0],[.36,.035],[.37,.09],[.35,.135],[.3,.17],[.32,.205],[.3,.235],[.22,.265],[.19,.32],[.17,.43],[.19,.53],[.22,.59],[.23,.63],[.19,.665],[0,.665]];
 lathe(profile,m,group);
@@ -58,5 +60,5 @@ const back='rnbqkbnr';
 for(let f=0;f<8;f++){piece(back[f],'w',f-3.5,-3.5);piece('p','w',f-3.5,-2.5);piece('p','b',f-3.5,2.5);piece(back[f],'b',f-3.5,3.5)}
 function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}new ResizeObserver(resize).observe(host);resize();
 function render(){requestAnimationFrame(render);controls.update();renderer.render(scene,camera)}render();
-status.textContent='Studio lighting v0.6 · Warm ivory · Slate blue · A–H / 1–8';
+status.textContent='Studio lighting v0.7 · Smaller pieces · Rear fill · A–H / 1–8';
 </script></body></html>
