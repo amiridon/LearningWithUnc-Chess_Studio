@@ -1,20 +1,30 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>LearningWithUnc · 3D Chess Studio</title>
 <style>*{box-sizing:border-box}html,body{margin:0;height:100%;background:#111b2a;color:#f4f2e9;font-family:system-ui,Arial}body{display:flex;flex-direction:column}header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;background:#182439}header strong{font-size:15px}small{display:block;color:#afbdd0;font-size:11px}button{background:#304864;color:#fff;border:1px solid #5a708c;padding:9px 11px;border-radius:7px;cursor:pointer}button:focus-visible{outline:2px solid #fff}#view{flex:1;min-height:220px;position:relative}#status{position:absolute;bottom:12px;left:12px;font-size:12px;padding:7px 10px;background:#142035d9;border-radius:7px;pointer-events:none}canvas{display:block;touch-action:none}</style></head><body>
-<header><div><strong>LearningWithUnc · 3D Chess Studio</strong><small>Mobile preview · Procedural models · Soft studio lighting</small></div><div><button id="top">Top down</button> <button id="angle">Reference angle</button> <button id="reset">Reset view</button></div></header><main id="view"><div id="status">Starting renderer…</div></main>
+<header id="appHeader"><div><strong>LearningWithUnc · 3D Chess Studio</strong><small>Mobile preview · Procedural models · Soft studio lighting</small></div><div><button id="top">Top down</button> <button id="angle">Reference angle</button> <button id="fit">Fit board</button> <button id="present">Presentation</button> <button id="reset">Reset view</button></div></header><main id="view"><div id="status">Starting renderer…</div></main>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-const host=document.getElementById('view'),status=document.getElementById('status');
+const host=document.getElementById('view'),status=document.getElementById('status'),appHeader=document.getElementById('appHeader');
+const params=new URLSearchParams(window.location.search);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#252b32');
 const camera=new THREE.PerspectiveCamera(29,1,.1,150);camera.up.set(0,0,1);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.88;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,0,.25);controls.enablePan=false;controls.minDistance=9;controls.maxDistance=55;
-function pose(top){controls.reset();camera.position.set(0,top?0:-9.5,top?34:31);controls.target.set(0,0,.25);camera.lookAt(controls.target);controls.update()}
-document.getElementById('top').onclick=()=>pose(true);document.getElementById('angle').onclick=()=>pose(false);document.getElementById('reset').onclick=()=>{camera.zoom=1;camera.updateProjectionMatrix();pose(false)};pose(false);
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
+let livePieces=[];
+const poses={top:{p:[0,0,34],t:[0,0,.25]},reference:{p:[0,-9.5,31],t:[0,0,.25]},fit:{p:[0,-7.6,25],t:[0,0,.2]}};
+function pose(name){const preset=poses[name]||poses.reference;controls.reset();camera.position.set(...preset.p);controls.target.set(...preset.t);camera.lookAt(controls.target);controls.update()}
+function fitBoard(){pose('fit')}
+function setPresentationMode(enabled){appHeader.style.display=enabled?'none':'';if(params.get('hud')==='0')status.style.display=enabled?'none':''}
+document.getElementById('top').onclick=()=>pose('top');document.getElementById('angle').onclick=()=>pose('reference');document.getElementById('fit').onclick=()=>fitBoard();document.getElementById('present').onclick=()=>setPresentationMode(appHeader.style.display!=='none');document.getElementById('reset').onclick=()=>{camera.zoom=1;camera.updateProjectionMatrix();pose('reference')};
+window.addEventListener('keydown',event=>{if(event.key==='r'||event.key==='R'){pose('reference')}else if(event.key==='f'||event.key==='F'){fitBoard()}else if(event.key==='Escape'){setPresentationMode(false)}});
+renderer.domElement.addEventListener('dblclick',event=>{if(!livePieces.length)return;const rect=renderer.domElement.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(livePieces,true)[0];if(!hit)return;const offset=camera.position.clone().sub(controls.target);controls.target.lerp(hit.point,.85);camera.position.copy(controls.target).add(offset);controls.update()});
+pose(params.get('pose')||'reference');
+if(params.get('presentation')==='1')setPresentationMode(true);
 scene.add(new THREE.HemisphereLight(0xe4e9f0,0x29313b,.65));scene.add(new THREE.AmbientLight(0xffffff,.12));
 RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xffe8c9,4.2,10,8);area.position.set(-3,-3,10);area.lookAt(0,0,0);scene.add(area);
 const fill=new THREE.RectAreaLight(0xdde8ff,2.8,10,7);fill.position.set(1.5,6,9);fill.lookAt(0,1.8,.65);scene.add(fill);
@@ -115,10 +125,14 @@ loader.load(MODEL_URL, gltf=>{
     }
     newPieces.forEach(obj=>scene.add(obj));
     fallbackPieces.forEach(obj=>scene.remove(obj));
+    livePieces=newPieces;
     status.textContent='v1.1 · Larger Staunton pieces · 32 sculpted meshes';
-  }catch(err){newPieces.forEach(obj=>scene.remove(obj));status.textContent='Model issue: procedural fallback displayed';console.error(err)}
+    window.__sceneReady=true;
+  }catch(err){newPieces.forEach(obj=>scene.remove(obj));livePieces=fallbackPieces;status.textContent='Model issue: procedural fallback displayed';window.__sceneReady=true;console.error(err)}
 },undefined,err=>{
+  livePieces=fallbackPieces;
   status.textContent='Model download unavailable: fallback pieces displayed';
+  window.__sceneReady=true;
   console.error('Poly Haven model failed to load',err);
 });
 function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false)}new ResizeObserver(resize).observe(host);resize();
