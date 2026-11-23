@@ -11,15 +11,20 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 const host=document.getElementById('view'),status=document.getElementById('status'),appHeader=document.getElementById('appHeader');
 const params=new URLSearchParams(window.location.search);
-const scene=new THREE.Scene();scene.background=new THREE.Color('#5a6c86');
+const scene=new THREE.Scene();scene.background=new THREE.Color('#5f718b');
 const camera=new THREE.PerspectiveCamera(34,1,.1,150);camera.up.set(0,0,1);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.66;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
+const pmremGenerator=new THREE.PMREMGenerator(renderer);
+const envMap=pmremGenerator.fromScene(new RoomEnvironment(),.03).texture;
+scene.environment=envMap;
+scene.environmentIntensity=.82;
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,-.6,.26);controls.enablePan=false;controls.minDistance=6;controls.maxDistance=38;controls.maxPolarAngle=Math.PI*.48;controls.minPolarAngle=Math.PI*.18;
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 let livePieces=[];
-const poses={top:{p:[0,0,24],t:[0,0,.3]},reference:{p:[.78,-8.2,10.85],t:[.28,-.55,.24]},fit:{p:[.76,-7.75,10.2],t:[.24,-.48,.23]}};
+const poses={top:{p:[0,0,24],t:[0,0,.3]},reference:{p:[.82,-8.05,10.75],t:[.3,-.6,.24]},fit:{p:[.8,-7.65,10.1],t:[.26,-.52,.23]}};
 function pose(name){const preset=poses[name]||poses.reference;controls.reset();camera.position.set(...preset.p);controls.target.set(...preset.t);camera.lookAt(controls.target);controls.update()}
 function fitBoard(){pose('fit')}
 function setPresentationMode(enabled){appHeader.style.display=enabled?'none':'';if(params.get('hud')==='0')status.style.display=enabled?'none':''}
@@ -28,16 +33,16 @@ window.addEventListener('keydown',event=>{if(event.key==='r'||event.key==='R'){p
 renderer.domElement.addEventListener('dblclick',event=>{if(!livePieces.length)return;const rect=renderer.domElement.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(livePieces,true)[0];if(!hit)return;const offset=camera.position.clone().sub(controls.target);controls.target.lerp(hit.point,.85);camera.position.copy(controls.target).add(offset);controls.update()});
 pose(params.get('pose')||'reference');
 if(params.get('presentation')==='1')setPresentationMode(true);
-scene.add(new THREE.HemisphereLight(0xe4eeff,0x1e242e,.78));scene.add(new THREE.AmbientLight(0xffffff,.11));
-RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xffedd8,6.1,10.6,8.4);area.position.set(-2.65,-2.6,10.1);area.lookAt(0,-.2,.4);scene.add(area);
-const fill=new THREE.RectAreaLight(0xbfd3f1,2.45,8.4,7.4);fill.position.set(4.25,5.1,7.7);fill.lookAt(0,.9,.56);scene.add(fill);
+scene.add(new THREE.HemisphereLight(0xe5ecf7,0x1d242e,.5));scene.add(new THREE.AmbientLight(0xffffff,.03));
+RectAreaLightUniformsLib.init();const area=new THREE.RectAreaLight(0xffe6ca,7.15,10.8,8.5);area.position.set(-2.35,-2.7,10.3);area.lookAt(.2,-.35,.45);scene.add(area);
+const fill=new THREE.RectAreaLight(0xd5e1f3,2.05,8.2,7.2);fill.position.set(4.4,5.2,7.9);fill.lookAt(.1,1.1,.58);scene.add(fill);
 // A broad, shadow-free rear kicker lifts the dark pieces off the dark backdrop.
-const rearRim=new THREE.DirectionalLight(0xc1d3ee,1.12);rearRim.position.set(2.5,7.6,6.8);rearRim.target.position.set(0,2,0);scene.add(rearRim.target);scene.add(rearRim);
-const sun=new THREE.DirectionalLight(0xffe7c7,1.58);sun.position.set(-3.1,-3.85,10.5);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.bias=-.00024;sun.shadow.radius=4;scene.add(sun);
-const frontLift=new THREE.DirectionalLight(0xe8f1ff,.76);frontLift.position.set(1.4,-6.8,4.8);frontLift.target.position.set(0,2.5,.5);scene.add(frontLift.target);scene.add(frontLift);
+const rearRim=new THREE.DirectionalLight(0xbfd4ee,.86);rearRim.position.set(2.65,7.7,7.1);rearRim.target.position.set(0,2.1,0);scene.add(rearRim.target);scene.add(rearRim);
+const sun=new THREE.DirectionalLight(0xffe3bf,1.34);sun.position.set(-3.0,-3.95,10.2);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-7;sun.shadow.camera.right=7;sun.shadow.camera.top=7;sun.shadow.camera.bottom=-7;sun.shadow.bias=-.00024;sun.shadow.radius=4;scene.add(sun);
+const frontLift=new THREE.DirectionalLight(0xe6f0fe,.56);frontLift.position.set(1.4,-6.8,4.8);frontLift.target.position.set(0,2.5,.5);scene.add(frontLift.target);scene.add(frontLift);
 
-const mat=(color,roughness=.3,metalness=.12)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
-const ivory=mat('#e7dec9',.35,.03),ebony=mat('#1e2633',.14,.45),blue=mat('#6d86aa',.54,.03),cream=mat('#e8ddc5',.58,.01),trim=mat('#1a212c',.5,.06),gold=mat('#9e8159',.33,.3);
+const mat=(color,roughness=.3,metalness=.12,clearcoat=.0,clearcoatRoughness=.2,envMapIntensity=1)=>new THREE.MeshPhysicalMaterial({color,roughness,metalness,clearcoat,clearcoatRoughness,envMapIntensity});
+const ivory=mat('#d9ccb2',.36,.015,.38,.22,.76),ebony=mat('#121925',.09,.24,1,.06,1.25),blue=mat('#5f7ba3',.56,.02,.08,.28,.58),cream=mat('#dcccac',.6,.01,.06,.3,.58),trim=mat('#1b222d',.43,.07,.24,.24,.82),gold=mat('#9e8159',.31,.34,.25,.24,1.02);
 function mesh(g,m,parent,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
 const BORDER=.36;
 mesh(new THREE.BoxGeometry(26,26,.7),mat('#1f232a',.92,.02),scene,0,0,-.64);
@@ -144,8 +149,8 @@ loader.load(MODEL_URL, gltf=>{
   window.__sceneReady=true;
   console.error('Poly Haven model failed to load',err);
 });
-const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));const bloom=new UnrealBloomPass(new THREE.Vector2(1,1),.035,.1,1.04);composer.addPass(bloom);
-const vignette=document.createElement('div');vignette.style.cssText='position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 44%,rgba(255,255,255,0) 58%,rgba(4,7,12,.18) 100%),linear-gradient(to bottom,rgba(0,0,0,0) 76%,rgba(0,0,0,.17) 100%)';host.append(vignette);
+const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));const bloom=new UnrealBloomPass(new THREE.Vector2(1,1),.022,.07,1.08);composer.addPass(bloom);
+const vignette=document.createElement('div');vignette.style.cssText='position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 44%,rgba(255,255,255,0) 60%,rgba(5,7,11,.16) 100%),linear-gradient(to bottom,rgba(0,0,0,0) 79%,rgba(0,0,0,.16) 100%)';host.append(vignette);
 function addHighlight(file,rank,color='#f6df63'){const glow=new THREE.Mesh(new THREE.PlaneGeometry(.98,.98),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.5,depthWrite:false,side:THREE.DoubleSide}));glow.position.set(file-3.5,rank-3.5,.055);scene.add(glow)}addHighlight(7,8);addHighlight(6,5,'#f2d451');
 function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);composer.setSize(w,h)}new ResizeObserver(resize).observe(host);resize();
 function render(){requestAnimationFrame(render);controls.update();composer.render()}render();
