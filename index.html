@@ -8,15 +8,18 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
 const host=document.getElementById('view'),status=document.getElementById('status'),appHeader=document.getElementById('appHeader');
 const params=new URLSearchParams(window.location.search);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#505a6b');
 const camera=new THREE.PerspectiveCamera(33,1,.1,150);camera.up.set(0,0,1);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.72;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,0,.3);controls.enablePan=false;controls.minDistance=7;controls.maxDistance=38;controls.maxPolarAngle=Math.PI*.48;controls.minPolarAngle=Math.PI*.18;
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.78;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.07;controls.target.set(0,-.3,.3);controls.enablePan=false;controls.minDistance=6;controls.maxDistance=38;controls.maxPolarAngle=Math.PI*.48;controls.minPolarAngle=Math.PI*.18;
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 let livePieces=[];
-const poses={top:{p:[0,0,24],t:[0,0,.3]},reference:{p:[0,-8.8,13.9],t:[0,0,.28]},fit:{p:[0,-8.35,12.5],t:[0,0,.28]}};
+const poses={top:{p:[0,0,24],t:[0,0,.3]},reference:{p:[.95,-7.5,10.9],t:[.35,-.25,.26]},fit:{p:[.8,-7.15,9.9],t:[.25,-.25,.25]}};
 function pose(name){const preset=poses[name]||poses.reference;controls.reset();camera.position.set(...preset.p);controls.target.set(...preset.t);camera.lookAt(controls.target);controls.update()}
 function fitBoard(){pose('fit')}
 function setPresentationMode(enabled){appHeader.style.display=enabled?'none':'';if(params.get('hud')==='0')status.style.display=enabled?'none':''}
@@ -44,8 +47,8 @@ mesh(new THREE.BoxGeometry(8+2*BORDER,8+2*BORDER,.34),trim,scene,0,0,-.23);
 const inset=mat('#98a0aa',.38,.18);
 mesh(new THREE.BoxGeometry(8.035,8.035,.012),inset,scene,0,0,-.019);
 function makeSquareMaterial(base,stripe){const c=document.createElement('canvas');c.width=256;c.height=256;const x=c.getContext('2d');x.fillStyle=base;x.fillRect(0,0,256,256);x.strokeStyle=stripe;x.lineWidth=3;for(let i=-256;i<512;i+=16){x.beginPath();x.moveTo(i,0);x.lineTo(i+256,256);x.stroke()}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1,1);t.anisotropy=renderer.capabilities.getMaxAnisotropy();return new THREE.MeshStandardMaterial({map:t,roughness:.62,metalness:.02})}
-const blueSquare=makeSquareMaterial('#5e78a4','rgba(255,255,255,.105)');
-const creamSquare=makeSquareMaterial('#dfd3bb','rgba(94,96,102,.072)');
+const blueSquare=makeSquareMaterial('#6883ae','rgba(255,255,255,.095)');
+const creamSquare=makeSquareMaterial('#e6ddc8','rgba(90,93,97,.06)');
 for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++)mesh(new THREE.BoxGeometry(1,1,.032),(rank+file)%2?blueSquare:creamSquare,scene,file-3.5,rank-3.5,.007);
 const labelCanvas=document.createElement('canvas');labelCanvas.width=128;labelCanvas.height=128;
 const ctx=labelCanvas.getContext('2d');ctx.fillStyle='#ecebe7';ctx.font='bold 78px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -55,7 +58,7 @@ const snapshot=document.createElement('canvas');snapshot.width=128;snapshot.heig
 const label=new THREE.Mesh(new THREE.PlaneGeometry(.20,.20),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
 label.position.set(x,y,-.045);scene.add(label);
 }
-for(let file=0;file<8;file++)addBoardLabel('HGFEDCBA'[file],file-3.5,-4.18);
+for(let file=0;file<8;file++)addBoardLabel('ABCDEFGH'[file],file-3.5,-4.18);
 for(let rank=0;rank<8;rank++)addBoardLabel(String(rank+1),-4.18,rank-3.5);
 const fallbackPieces=[];
 const sphere=r=>new THREE.SphereGeometry(r,32,20);
@@ -79,7 +82,7 @@ mesh(sphere(.038),gold,group,-.19,-.17,1.13);
 }
 }
 const back='rnbqkbnr';
-for(let f=0;f<8;f++){piece(back[f],'w',f-3.5,3.5);piece('p','w',f-3.5,2.5);piece('p','b',f-3.5,-2.5);piece(back[f],'b',f-3.5,-3.5)}
+for(let f=0;f<8;f++){piece(back[f],'b',f-3.5,3.5);piece('p','b',f-3.5,2.5);piece('p','w',f-3.5,-2.5);piece(back[f],'w',f-3.5,-3.5)}
 // Real sculpted meshes from Poly Haven's CC0 Chess Set, via a public GitHub mirror.
 // The previous 3dassets.dev pack had obviously angular silhouettes in user screenshots.
 // GLTFLoader resolves the adjacent chess_set.bin automatically.
@@ -144,6 +147,7 @@ function resize(){const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;
 function render(){requestAnimationFrame(render);controls.update();renderer.render(scene,camera)}render();
 // Loading status is managed by the GLB loader above.
 </script></body></html>
+
 
 
 
